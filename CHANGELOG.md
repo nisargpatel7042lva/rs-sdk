@@ -13,14 +13,20 @@
     connection string in either shape wallets emit, including the
     `nostr+walletconnect:<pubkey>?...` pathname form that
     `NostrWalletConnectURI::parse` rejects and the ts-sdk accepts. `NwcClient` speaks
-    request/response and notifications over an injected `RelayPoolTrait`, so the same code
-    path runs against a scripted mock wallet in CI and a real wallet in production. Because
+    request/response and notifications, building its own relay pool from the connection's
+    relays (`NwcClient::connect`) so its permanent subscription does not land on a pool
+    shared with the transport; `with_pool` injects one for tests. Because
     `RelayPoolTrait` has no unsubscribe, it holds one subscription and one reader task and
     correlates responses in process by request event id, rather than the ts-sdk
     subscription-per-request shape that would leak one live REQ per payment. Wallet
-    responses are parsed permissively field for field, so a missing or unknown optional
-    field cannot turn a paid invoice into a failed verification, and notifications are
-    decrypted by kind (23196 NIP-04, 23197 NIP-44) rather than always as NIP-04. A
+    responses are parsed permissively field for field, so an optional field that is
+    missing, unknown, or present with the wrong JSON type cannot turn a paid invoice into
+    a failed verification, and events are decrypted by ciphertext shape rather than by
+    kind, so a NIP-04 payload on kind 23197 still decodes and a wallet publishing both
+    notification kinds is not mis-handled. Failures are a typed `NwcError` whose messages
+    carry no wallet payload, and whose `Timeout` and `Closed` variants report a `Delivery`
+    of `NotSent`, `Unknown` or `Sent` whose `may_have_reached_wallet()` tells a caller
+    whether retrying a non-idempotent `pay_invoice` is safe. A
     `MockWallet` behind `test-utils` scripts answers, errors, silence, delays and malformed
     replies over a linked `MockRelayPool`, and can publish a `payment_received`
     notification to drive settlement.
