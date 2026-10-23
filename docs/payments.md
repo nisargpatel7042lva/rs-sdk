@@ -350,9 +350,9 @@ reference implementation.
 ## The NWC rail (NIP-47)
 
 Lightning BOLT11 over Nostr Wallet Connect, for PMI
-`bitcoin-lightning-bolt11`. Enable the `nwc` feature, which is off by default
-and adds no new crate to the dependency tree (it only switches on an existing
-`nostr-sdk` NIP):
+`bitcoin-lightning-bolt11`. Enable the `nwc` feature, which is off by default.
+It switches on `nostr-sdk/nip47`, which pulls in NIP-04 and therefore adds
+three crates to the tree: `aes`, `cbc` and `cipher`.
 
 ```toml
 contextvm-sdk = { version = "0.2", features = ["nwc"] }
@@ -447,6 +447,23 @@ other wallet error code is fatal, as are `expired` and `failed`.
 **Nothing logs the invoice.** A BOLT11 string is a bearer payment request, so
 no tracing call in the rail binds `pay_req`, the invoice, or a preimage. Logs
 carry the request event id, the state, and booleans for field presence.
+
+**A failed `pay_invoice` is not automatically safe to retry.** `pay_invoice`
+is not idempotent, so a caller that retries the wrong failure pays twice.
+`NwcError::Timeout` and `NwcError::Closed` both carry a `Delivery`, and
+`NwcError::may_have_reached_wallet()` reads it for you:
+
+| `Delivery` | When | Safe to retry |
+| --- | --- | --- |
+| `NotSent` | the request never left, for example a closed client or a relay that rejected the event | yes |
+| `Unknown` | the deadline fell *inside* the publish | no |
+| `Sent` | a relay accepted the event and the answer never came | no |
+
+`Unknown` exists because the pool writes the EVENT before it waits on the
+relay's `OK`, so a deadline that fires mid-publish leaves delivery genuinely
+unknowable. It is grouped with `Sent` rather than `NotSent`: the conservative
+direction is the one that does not pay twice. A wallet error or a malformed
+response also count as reached, since the wallet plainly answered.
 
 ### Testing against a real wallet
 

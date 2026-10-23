@@ -47,8 +47,10 @@
     verification always returns an error, never an empty success that the middleware
     would read as payment. Amounts are validated before any wallet call, and no tracing
     call carries the invoice, which is a bearer payment request.
-  - The NWC payment handler, `LnBolt11NwcPaymentHandler`, the client side of the Phase B
-    Lightning rail, completing it. It pays an offered BOLT11 invoice with `pay_invoice`,
+  - The NWC payment handler, `LnBolt11NwcPaymentHandler`, which lets a client pay for a
+    priced capability, completing the rail. It pays an offered BOLT11 invoice with
+    `pay_invoice`, sending a NIP-40 expiration so a wallet honouring it will not act on a
+    request the caller has already abandoned,
     bounded by its own response timeout because the client engine gives `handle()`
     neither a timeout nor a cancellation token, and leaves the spending decision with
     `payment_policy` rather than adding a second gate. A wallet that answers with neither
@@ -58,8 +60,7 @@
     by hand. Both NWC option structs now carry `new()` and `with_*` builders, since
     `#[non_exhaustive]` makes a struct literal unusable from a downstream crate.
     `docs/payments.md` documents the rail, its options, which lifecycle invokes the
-    handler, and its operational notes, and no longer describes Phase B as deferred or
-    lists LNbits as planned.
+    handler, when a failed payment is safe to retry, and its operational notes.
   - Server-side payment-interaction negotiation and advertisement: the server transport
     now parses client `pmi` and `payment_interaction` tags, negotiates the effective
     session mode (`transparent` by default, `explicit_gating` when the server policy
