@@ -30,9 +30,9 @@
     `MockWallet` behind `test-utils` scripts answers, errors, silence, delays and malformed
     replies over a linked `MockRelayPool`, and can publish a `payment_received`
     notification to drive settlement.
-  - The NWC payment processor, `LnBolt11NwcPaymentProcessor`, the server side of the
-    Phase B Lightning rail for PMI `bitcoin-lightning-bolt11`, behind the same
-    off-by-default `nwc` feature. `create_payment_required` mints a BOLT11 invoice via
+  - The NWC payment processor, `LnBolt11NwcPaymentProcessor`, which lets a server charge
+    for a capability in Lightning over Nostr Wallet Connect, for PMI
+    `bitcoin-lightning-bolt11`, behind the same off-by-default `nwc` feature. `create_payment_required` mints a BOLT11 invoice via
     `make_invoice` in msats with an expiry, caches the invoice to `payment_hash` mapping,
     and advertises the configured TTL rather than the wallet's own `expires_at`, which
     providers return in non-standard forms. `verify_payment` waits for settlement either
